@@ -42,7 +42,7 @@ export const setAuthCookies = (
   res.cookie('accessToken', accessToken, {
     httpOnly: true,
     secure: IS_PROD,
-    sameSite: 'lax',
+    sameSite: IS_PROD ? 'none' : 'lax', // Required for cross-origin cookies
     maxAge: 15 * 60 * 1000, // 15 minutes
     path: '/',
   });
@@ -51,7 +51,7 @@ export const setAuthCookies = (
   res.cookie('refreshToken', refreshToken, {
     httpOnly: true,
     secure: IS_PROD,
-    sameSite: 'lax',
+    sameSite: IS_PROD ? 'none' : 'lax', // Required for cross-origin cookies
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     path: '/api/auth/refresh',
   });
@@ -62,13 +62,13 @@ export const clearAuthCookies = (res: Response): void => {
   res.clearCookie('accessToken', {
     httpOnly: true,
     secure: IS_PROD,
-    sameSite: 'lax',
+    sameSite: IS_PROD ? 'none' : 'lax',
     path: '/',
   });
   res.clearCookie('refreshToken', {
     httpOnly: true,
     secure: IS_PROD,
-    sameSite: 'lax',
+    sameSite: IS_PROD ? 'none' : 'lax',
     path: '/api/auth/refresh',
   });
 };
