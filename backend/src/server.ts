@@ -15,6 +15,9 @@ import { errorHandler, notFound } from './middleware/error.middleware.js';
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Trust the reverse proxy (e.g. Render, Heroku) so rate limits use the correct client IP
+app.set('trust proxy', 1);
+
 // Remove trailing slash from CLIENT_URL if it exists to fix CORS issues
 const CLIENT_URL = process.env.CLIENT_URL?.replace(/\/$/, '') || 'http://localhost:3000';
 
