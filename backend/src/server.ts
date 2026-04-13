@@ -14,7 +14,9 @@ import { errorHandler, notFound } from './middleware/error.middleware.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:3000';
+
+// Remove trailing slash from CLIENT_URL if it exists to fix CORS issues
+const CLIENT_URL = process.env.CLIENT_URL?.replace(/\/$/, '') || 'http://localhost:3000';
 
 // Security headers
 app.use(helmet());
@@ -22,7 +24,7 @@ app.use(helmet());
 // CORS — allow frontend origin with credentials (for httpOnly cookies)
 app.use(
   cors({
-    origin: CLIENT_URL,
+    origin: [CLIENT_URL, `${CLIENT_URL}/`],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
