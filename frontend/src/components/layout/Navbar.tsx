@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ThemeToggle } from './ThemeToggle';
+// import { ThemeToggle } from './ThemeToggle';
 import { getInitials } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -54,7 +54,7 @@ export function Navbar({ onMenuClick }: NavbarProps) {
       </div>
 
       <div className="flex items-center gap-2">
-        <ThemeToggle />
+        {/* <ThemeToggle /> */}
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
