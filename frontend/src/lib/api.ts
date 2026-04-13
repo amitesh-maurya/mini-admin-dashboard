@@ -1,0 +1,72 @@
+import axios from 'axios';
+
+const api = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api',
+  withCredentials: true, // send httpOnly cookies automatically
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Track whether a token refresh is already in-flight so concurrent 401s don't
+// each trigger their own /refresh call.
+let isRefreshing = false;
+let pendingQueue: Array<{ resolve: () => void; reject: (err: unknown) => void }> = [];
+
+const flushQueue = (err: unknown) => {
+  pendingQueue.forEach((p) => (err ? p.reject(err) : p.resolve()));
+  pendingQueue = [];
+};
+
+// Response interceptor: on 401 try to refresh the access token before giving up
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    // Only attempt refresh once per request and only for 401s that aren't
+    // coming from the refresh/login/register endpoints themselves.
+    const isAuthEndpoint =
+      originalRequest?.url?.includes('/auth/refresh') ||
+      originalRequest?.url?.includes('/auth/login') ||
+      originalRequest?.url?.includes('/auth/register');
+
+    if (error.response?.status === 401 && !originalRequest._retried && !isAuthEndpoint) {
+      originalRequest._retried = true;
+
+      if (isRefreshing) {
+        // Queue this request until the refresh resolves
+        return new Promise((resolve, reject) => {
+          pendingQueue.push({
+            resolve: () => resolve(api(originalRequest)),
+            reject,
+          });
+        });
+      }
+
+      isRefreshing = true;
+
+      try {
+        await api.post('/auth/refresh'); // uses refreshToken cookie automatically
+        flushQueue(null);
+        return api(originalRequest); // retry the original request
+      } catch (refreshError) {
+        flushQueue(refreshError);
+        // Refresh failed — redirect to login
+        if (typeof window !== 'undefined') {
+          const pathname = window.location.pathname;
+          if (pathname !== '/login' && pathname !== '/register') {
+            window.location.href = '/login';
+          }
+        }
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
+
+export default api;
