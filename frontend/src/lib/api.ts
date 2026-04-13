@@ -1,7 +1,11 @@
 import axios from 'axios';
 
+const baseUrlRaw = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+// Automatically append /api if it's missing to prevent 404 errors
+const baseURL = baseUrlRaw.endsWith('/api') ? baseUrlRaw : `${baseUrlRaw.replace(/\/$/, '')}/api`;
+
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api',
+  baseURL,
   withCredentials: true, // send httpOnly cookies automatically
   headers: {
     'Content-Type': 'application/json',
