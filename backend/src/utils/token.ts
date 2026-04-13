@@ -47,13 +47,13 @@ export const setAuthCookies = (
     path: '/',
   });
 
-  // Scope the refresh token cookie to only the refresh endpoint for extra safety
+  // Scope refresh token to /api/auth so the browser sends it to /api/auth/refresh
   res.cookie('refreshToken', refreshToken, {
     httpOnly: true,
     secure: IS_PROD,
     sameSite: IS_PROD ? 'none' : 'lax', // Required for cross-origin cookies
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    path: '/api/auth/refresh',
+    path: '/api/auth',
   });
 };
 
@@ -69,7 +69,7 @@ export const clearAuthCookies = (res: Response): void => {
     httpOnly: true,
     secure: IS_PROD,
     sameSite: IS_PROD ? 'none' : 'lax',
-    path: '/api/auth/refresh',
+    path: '/api/auth',
   });
 };
 

@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { useRouter } from 'next/navigation';
 import { User, LoginPayload, RegisterPayload } from '@/types';
 import { authService } from '@/services/auth.service';
+import { setStoredToken, removeStoredToken } from '@/lib/api';
 
 interface AuthContextValue {
   user: User | null;
@@ -36,6 +37,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = useCallback(async (payload: LoginPayload) => {
     const res = await authService.login(payload);
     if (res.success && res.data) {
+      // Store the access token so it can be sent in Authorization headers
+      // on subsequent requests (required for cross-origin deployments).
+      if (res.accessToken) setStoredToken(res.accessToken);
       setUser(res.data);
       router.push('/dashboard');
     }
@@ -44,6 +48,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const register = useCallback(async (payload: RegisterPayload) => {
     const res = await authService.register(payload);
     if (res.success && res.data) {
+      if (res.accessToken) setStoredToken(res.accessToken);
       setUser(res.data);
       router.push('/dashboard');
     }
@@ -51,6 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(async () => {
     await authService.logout();
+    removeStoredToken();
     setUser(null);
     router.push('/login');
   }, [router]);

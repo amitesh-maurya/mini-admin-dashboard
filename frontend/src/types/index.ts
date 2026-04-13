@@ -47,6 +47,8 @@ export interface ApiResponse<T = unknown> {
   message: string;
   data?: T;
   errors?: string[];
+  /** Present on login/register/refresh responses for cross-origin header auth */
+  accessToken?: string;
 }
 
 export interface PaginatedResponse<T> {

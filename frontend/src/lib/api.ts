@@ -4,12 +4,39 @@ const baseUrlRaw = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api
 // Automatically append /api if it's missing to prevent 404 errors
 const baseURL = baseUrlRaw.endsWith('/api') ? baseUrlRaw : `${baseUrlRaw.replace(/\/$/, '')}/api`;
 
+// ─── Token storage helpers ────────────────────────────────────────────────────
+// Stored in localStorage so the token survives page refreshes.
+// The token is also sent as a cookie (httpOnly) by the server for same-origin fallback.
+const TOKEN_KEY = 'accessToken';
+
+export const getStoredToken = (): string | null =>
+  typeof window !== 'undefined' ? localStorage.getItem(TOKEN_KEY) : null;
+
+export const setStoredToken = (token: string): void =>
+  localStorage.setItem(TOKEN_KEY, token);
+
+export const removeStoredToken = (): void =>
+  localStorage.removeItem(TOKEN_KEY);
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 const api = axios.create({
   baseURL,
-  withCredentials: true, // send httpOnly cookies automatically
+  withCredentials: true, // still send cookies as fallback for same-origin
   headers: {
     'Content-Type': 'application/json',
   },
+});
+
+// Request interceptor: attach the stored access token as Authorization Bearer header.
+// This is the primary auth mechanism for cross-origin (Vercel + Render) deployments.
+api.interceptors.request.use((config) => {
+  const token = getStoredToken();
+  if (token) {
+    config.headers = config.headers ?? {};
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
 });
 
 // Track whether a token refresh is already in-flight so concurrent 401s don't
@@ -51,7 +78,10 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        await api.post('/auth/refresh'); // uses refreshToken cookie automatically
+        const refreshRes = await api.post('/auth/refresh');
+        // Update the stored token if the server returns a new one in the response body
+        const newToken: string | undefined = refreshRes.data?.accessToken;
+        if (newToken) setStoredToken(newToken);
         flushQueue(null);
         return api(originalRequest); // retry the original request
       } catch (refreshError) {

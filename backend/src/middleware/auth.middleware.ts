@@ -3,13 +3,24 @@ import jwt from 'jsonwebtoken';
 import { AuthRequest, Role } from '../types/index.js';
 import { verifyAccessToken } from '../utils/token.js';
 
-// Authenticate: reads httpOnly accessToken cookie, verifies JWT, attaches req.user
+// Authenticate: reads JWT from Authorization header (Bearer) first, then httpOnly cookie.
+// The header approach is required for cross-origin deployments (e.g. Vercel + Render)
+// where browsers block third-party httpOnly cookies.
 export const authenticate = (
   req: AuthRequest,
   res: Response,
   next: NextFunction
 ): void => {
-  const token: string | undefined = req.cookies?.accessToken;
+  // Prefer Authorization header (cross-origin friendly)
+  const authHeader = req.headers.authorization;
+  let token: string | undefined;
+
+  if (authHeader?.startsWith('Bearer ')) {
+    token = authHeader.slice(7);
+  } else {
+    // Fallback to httpOnly cookie (same-origin / local dev)
+    token = req.cookies?.accessToken;
+  }
 
   if (!token) {
     res.status(401).json({ success: false, message: 'Not authenticated. Please log in.' });

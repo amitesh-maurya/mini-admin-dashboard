@@ -13,11 +13,12 @@ import {
 import { authService } from '../services/auth.service.js';
 import User from '../models/User.js';
 
-/** Issues access + refresh tokens and sets both cookies. */
+/** Issues access + refresh tokens, sets cookies, and returns the access token for
+ *  cross-origin clients that cannot rely on httpOnly cookies (e.g. Vercel + Render). */
 const issueTokens = (
   res: Response,
   user: { _id: unknown; email: string; role: string; tokenVersion: number },
-): void => {
+): string => {
   const id = String(user._id);
   const accessToken = generateAccessToken({
     id,
@@ -27,6 +28,7 @@ const issueTokens = (
   });
   const refreshToken = generateRefreshToken({ id, tokenVersion: user.tokenVersion });
   setAuthCookies(res, accessToken, refreshToken);
+  return accessToken;
 };
 
 // ─── POST /api/auth/register ────────────────────────────────────────────────
@@ -34,7 +36,7 @@ export const register = asyncHandler<AuthRequest>(async (req, res) => {
   const { name, email, password } = req.body;
   const user = await authService.register(name, email, password);
 
-  issueTokens(res, {
+  const accessToken = issueTokens(res, {
     _id: user._id,
     email: user.email,
     role: user.role,
@@ -44,6 +46,7 @@ export const register = asyncHandler<AuthRequest>(async (req, res) => {
   res.status(201).json({
     success: true,
     message: 'Registration successful',
+    accessToken,
     data: {
       id: user._id,
       name: user.name,
@@ -60,7 +63,7 @@ export const login = asyncHandler<AuthRequest>(async (req, res) => {
   const { email, password } = req.body;
   const user = await authService.login(email, password);
 
-  issueTokens(res, {
+  const accessToken = issueTokens(res, {
     _id: user._id,
     email: user.email,
     role: user.role,
@@ -70,6 +73,7 @@ export const login = asyncHandler<AuthRequest>(async (req, res) => {
   res.status(200).json({
     success: true,
     message: 'Login successful',
+    accessToken,
     data: {
       id: user._id,
       name: user.name,
@@ -122,7 +126,8 @@ export const refresh = asyncHandler<AuthRequest>(async (req, res) => {
     path: '/',
   });
 
-  res.status(200).json({ success: true, message: 'Token refreshed' });
+  // Also return the token in the body so cross-origin clients can update their stored token
+  res.status(200).json({ success: true, message: 'Token refreshed', accessToken: newAccessToken });
 });
 
 // ─── POST /api/auth/logout ───────────────────────────────────────────────────
