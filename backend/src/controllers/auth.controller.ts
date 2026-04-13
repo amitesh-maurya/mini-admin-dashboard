@@ -112,10 +112,12 @@ export const refresh = asyncHandler<AuthRequest>(async (req, res) => {
     tokenVersion: user.tokenVersion,
   });
 
+  const isProd = process.env.NODE_ENV === 'production';
+
   res.cookie('accessToken', newAccessToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    secure: isProd,
+    sameSite: isProd ? 'none' : 'lax',
     maxAge: 15 * 60 * 1000,
     path: '/',
   });
